@@ -1,0 +1,7 @@
+{
+  "author": "Tarek Auel <tarek.auel@gmail.com>",
+  "dependencies": {
+    "express": "^4.10.7",
+    "socket.io": "^1.2.1"
+  }
+}
