@@ -1,3 +1,8 @@
+# Installation
+`git clone git@github.com:tarekauel/BackendDemo.git`
+
+`npm install`
+
 # Usage
 Two parameters:
 
