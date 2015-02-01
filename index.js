@@ -1,5 +1,28 @@
+var dataPath = undefined;
+var location = "";
+if (process.argv[2]) {
+    dataPath = process.argv[2].trim();
+    console.log("Data location: " + dataPath);
+    if (dataPath.charAt(0) != '/') {
+        console.error("Only absolute path for data path allowed!");
+        process.exit(1);
+    }
+} else {
+    console.error("Please provide a data path as first argument!");
+    process.exit(1);
+}
+
+if (process.argv[3]) {
+    location = process.argv[3].trim();
+    console.log("Script location: " + location + "demo.py");
+    if (location.charAt(0) != '/') {
+        console.error("Only absolute path for script path allowed!");
+        process.exit(1);
+    }
+}
+
 var spawn = require('child_process').spawn,
-    python    = spawn('/usr/bin/python2.7', ['demo_web.py', 'data/']);
+    python    = spawn('/usr/bin/python2.7', [location + 'demo.py', dataPath]);
 var fs = require('fs');
 var express = require('express');
 var app = express();
@@ -84,7 +107,7 @@ python.stdout.on('readable', function() {
     });
 });
 
-python.stderr.on('readable', function (data) {
+python.stderr.on('readable', function () {
     var chunk;
     while (null !== (chunk = python.stdout.read())) {
         var message = String(chunk);
