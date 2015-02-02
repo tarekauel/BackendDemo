@@ -1,5 +1,8 @@
 var dataPath = undefined;
 var location = "";
+
+var auto_suggest = undefined;
+
 if (process.argv[2]) {
     dataPath = process.argv[2].trim();
     console.log("Data location: " + dataPath);
@@ -37,6 +40,10 @@ fs.unlink('public/network_distance.json', function(err) {
     if (err && err.errno != 34) console.log(err);
 });
 
+app.get('/data.json', function(req, res){
+    res.send(auto_suggest);
+});
+
 app.use('/', express.static(__dirname + '/public'));
 var status = false;
 
@@ -71,6 +78,7 @@ python.stdout.on('readable', function() {
         console.log("OUTPUT:\n" + message);
         io.emit("chat message", message);
         if (message.indexOf("Waiting for messages") != -1) {
+            prepareAuto();
             status = true;
             io.emit("status", status);
         }
@@ -116,3 +124,28 @@ python.stderr.on('readable', function () {
     }
 });
 
+preparedAuto = false;
+
+prepareAuto = function() {
+    if (preparedAuto) {
+        return;
+    }
+    preparedAuto = true;
+    /* Provide autosuggest json */
+    //Converter Class
+    var Converter = require("csvtojson").core.Converter;
+    var fs = require("fs");
+
+    var csvFileName = dataPath + "auto.csv";
+    var fileStream = fs.createReadStream(csvFileName);
+    //new converter instance
+    var csvConverter = new Converter({constructResult: true});
+
+    //end_parsed will be emitted once parsing finished
+    csvConverter.on("end_parsed", function (jsonObj) {
+        auto_suggest = jsonObj;
+    });
+
+    //read from file
+    fileStream.pipe(csvConverter);
+};

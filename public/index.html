@@ -96,118 +96,87 @@
     $("#network-distance-error-text-a").invisible();
     $("#network-distance-error-text-b").invisible();
 
-    $.getJSON('data.json', function(data) {
-        var states = [];
-        var map = {};
-        data.forEach(function(elem) {
-            states.push(elem.name);
-            map[elem.name] = elem.code;
-        });
+    var init = function() {
+        $.getJSON('data.json', function (data) {
+            var states = [];
+            var map = {};
+            data.forEach(function (elem) {
+                states.push(elem.name);
+                map[elem.name] = elem["__id"];
+            });
 
-        states = new Bloodhound({
-            datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
-            queryTokenizer: Bloodhound.tokenizers.whitespace,
-            // `states` is an array of state names defined in "The Basics"
-            local: $.map(states, function(state) { return { value: state }; })
-        });
+            states = new Bloodhound({
+                datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
+                queryTokenizer: Bloodhound.tokenizers.whitespace,
+                // `states` is an array of state names defined in "The Basics"
+                local: $.map(states, function (state) {
+                    return {value: state};
+                })
+            });
 
-        function changeToSuccess(id, textId) {
-            var tag = $(id);
-            tag.addClass("has-success");
-            tag.removeClass("has-error");
-            if (textId !== undefined) {
-                $(textId).invisible();
+            function changeToSuccess(id, textId) {
+                var tag = $(id);
+                tag.addClass("has-success");
+                tag.removeClass("has-error");
+                if (textId !== undefined) {
+                    $(textId).invisible();
+                }
             }
-        }
 
-        function changeToFailure(id, textId) {
-            var tag = $(id);
-            tag.addClass("has-error");
-            tag.removeClass("has-success");
-            if (textId !== undefined) {
-                $(textId).visible();
+            function changeToFailure(id, textId) {
+                var tag = $(id);
+                tag.addClass("has-error");
+                tag.removeClass("has-success");
+                if (textId !== undefined) {
+                    $(textId).visible();
+                }
             }
-        }
 
-        // kicks off the loading/processing of `local` and `prefetch`
-        states.initialize();
+            // kicks off the loading/processing of `local` and `prefetch`
+            states.initialize();
 
-        addDropDown(spreadingActivationCompanyInput, "#searchbox-error-text", "#spreading-activation-searchbox");
-        addDropDown(ndInputA, "#network-distance-error-text-a", "#network-distance-searchbox");
-        addDropDown(ndInputB, "#network-distance-error-text-b", "#network-distance-searchbox");
+            addDropDown(spreadingActivationCompanyInput, "#searchbox-error-text", "#spreading-activation-searchbox");
+            addDropDown(ndInputA, "#network-distance-error-text-a", "#network-distance-searchbox");
+            addDropDown(ndInputB, "#network-distance-error-text-b", "#network-distance-searchbox");
 
-        function addDropDown(tag, inputErrorText, searchBox ) {
-            tag.typeahead({
-                        hint: true,
-                        highlight: true,
-                        minLength: 1
-                    },
-                    {
-                        name: 'states',
-                        displayKey: 'value',
-                        source: states.ttAdapter()
-                    }).on('typeahead:selected', function(event, data){
-                        console.log('selected item' + map[data.value]);
+            function addDropDown(tag, inputErrorText, searchBox) {
+                tag.typeahead({
+                            hint: true,
+                            highlight: true,
+                            minLength: 1
+                        },
+                        {
+                            name: 'states',
+                            displayKey: 'value',
+                            source: states.ttAdapter()
+                        }).on('typeahead:selected', function (event, data) {
+                            console.log('selected item' + map[data.value]);
+                            changeToSuccess(searchBox, inputErrorText);
+                            selectedCompany[tag.attr('id')] = map[data.value];
+                        }).on('typeahead:closed', function (event, data) {
+                            var val = tag.val();
+                            if (map[val] === undefined) {
+                                tag.focus();
+                                changeToFailure(searchBox, inputErrorText);
+                            }
+                            console.log('selected item' + map[val]);
+                            selectedCompany[tag.attr('id')] = map[val];
+                        });
+
+                tag.blur(function () {
+                    var val = tag.val();
+                    if (map[val] === undefined) {
+                        $(tag).focus();
+                        changeToFailure(searchBox, inputErrorText);
+                    } else {
                         changeToSuccess(searchBox, inputErrorText);
-                        selectedCompany[tag.attr('id')] = map[data.value];
-                    }).on('typeahead:closed', function(event, data){
-                        var val = tag.val();
-                        if (map[val] === undefined) {
-                            tag.focus();
-                            changeToFailure(searchBox, inputErrorText);
-                        }
                         console.log('selected item' + map[val]);
                         selectedCompany[tag.attr('id')] = map[val];
-                    });
-
-            tag.blur(function() {
-                var val = tag.val();
-                if (map[val] === undefined) {
-                    $(tag).focus();
-                    changeToFailure(searchBox, inputErrorText);
-                } else {
-                    changeToSuccess(searchBox, inputErrorText);
-                    console.log('selected item' + map[val]);
-                    selectedCompany[tag.attr('id')] = map[val];
-                }
-            })
-        }
-
-        /*spreadingActivationCompanyInput.typeahead({
-                    hint: true,
-                    highlight: true,
-                    minLength: 1
-                },
-                {
-                    name: 'states',
-                    displayKey: 'value',
-                    source: states.ttAdapter()
-                }).on('typeahead:selected', function(event, data){
-                    console.log('selected item' + map[data.value]);
-                    changeToSuccess("spreading-activation-searchbox", "searchbox-error-text");
-                    selectedCompanySpreadingActivation = map[data.value];
-                }).on('typeahead:closed', function(event, data){
-                    var val = spreadingActivationCompanyInput.val();
-                    if (map[val] === undefined) {
-                        spreadingActivationCompanyInput.focus();
-                        changeToFailure("spreading-activation-searchbox", "searchbox-error-text");
                     }
-                    console.log('selected item' + map[val]);
-                    selectedCompanySpreadingActivation = map[val];
-                });
-
-        spreadingActivationCompanyInput.blur(function() {
-            var val = spreadingActivationCompanyInput.val();
-            if (map[val] === undefined) {
-                $("#spreading-activation-company-input").focus();
-                changeToFailure("spreading-activation-searchbox", "searchbox-error-text");
-            } else {
-                changeToSuccess("spreading-activation-searchbox", "searchbox-error-text");
-                console.log('selected item' + map[val]);
-                selectedCompanySpreadingActivation = map[val];
+                })
             }
-        })*/
-    });
+        });
+    };
 
 
     var socket = io();
@@ -249,6 +218,7 @@
 
     socket.on("status", function(status) {
         if (status == true) {
+            init();
             $('#report-status').text("Current status: ready");
             $('#report-status').removeClass("alert-info");
             $('#report-status').removeClass("alert-danger");
