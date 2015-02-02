@@ -30,15 +30,23 @@
         <div role="tabpanel" class="tab-pane active" id="spreading-activation">
             <form id="spreading-activation-form">
                 <div class="form-group" id="spreading-activation-searchbox">
-                    <label class="control-label" for="spreading-activation-company-input" id="searchbox-error-text">Company not found</label>
-                    <input id="spreading-activation-company-input" class="typeahead form-control input-lg" type="text" placeholder="input a company name">
+                    <label class="control-label" for="spreading-activation-company-input" id="searchbox-error-text">Entity not found</label>
+                    <input id="spreading-activation-company-input" class="typeahead form-control input-lg" type="text" placeholder="input an entity name">
                     <button class="btn btn-primary btn-lg" id="spreading-activation-go" style="margin-bottom:5px;">Send</button>
                 </div>
             </form>
             <div>
                 <table id="spreading-activation-result-table" class="table table-striped">
                     <thead>
-                    <tr><th>Company</th><th>Value</th></tr>
+                    <tr><th><div class="dropdown">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">
+                            Filter
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="filter_dd_sa" class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                            <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Action</a></li>
+                        </ul>
+                    </div></th><th>Value</th></tr>
                     </thead>
 
                 </table>
@@ -63,7 +71,7 @@
             <div>
                 <table id="network-distance-result-table" class="table table-striped">
                     <thead>
-                    <tr><th>company a</th><th>company b</th><th>distance</th></tr>
+                    <tr><th>entity a</th><th>entity b</th><th>distance</th></tr>
                     </thead>
 
                 </table>
@@ -77,6 +85,7 @@
 <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
 
 <script type="text/javascript">
+
     var selectedCompany = {};
     var spreadingActivationCompanyInput = $('#spreading-activation-company-input');
     var ndInputA = $('#network-distance-company-input-a');
@@ -101,8 +110,8 @@
             var states = [];
             var map = {};
             data.forEach(function (elem) {
-                states.push(elem.name);
-                map[elem.name] = elem["__id"];
+                states.push(elem.name + " (" + elem.type + ")");
+                map[elem.name + " (" + elem.type + ")"] = elem["__id"];
             });
 
             states = new Bloodhound({
@@ -153,7 +162,8 @@
                             console.log('selected item' + map[data.value]);
                             changeToSuccess(searchBox, inputErrorText);
                             selectedCompany[tag.attr('id')] = map[data.value];
-                        }).on('typeahead:closed', function (event, data) {
+                            selectedCompany[tag.attr('id') + "_name"] = data.value;
+                        })/*.on('typeahead:closed', function (event, data) {
                             var val = tag.val();
                             if (map[val] === undefined) {
                                 tag.focus();
@@ -161,18 +171,10 @@
                             }
                             console.log('selected item' + map[val]);
                             selectedCompany[tag.attr('id')] = map[val];
-                        });
+                        });*/
 
                 tag.blur(function () {
-                    var val = tag.val();
-                    if (map[val] === undefined) {
-                        $(tag).focus();
-                        changeToFailure(searchBox, inputErrorText);
-                    } else {
-                        changeToSuccess(searchBox, inputErrorText);
-                        console.log('selected item' + map[val]);
-                        selectedCompany[tag.attr('id')] = map[val];
-                    }
+                    tag.val(selectedCompany[tag.attr('id') + "_name"]);
                 })
             }
         });
@@ -181,7 +183,9 @@
 
     var socket = io();
     $('#spreading-activation').submit(function(){
-        socket.emit('start spreading activation', selectedCompany[spreadingActivationCompanyInput.attr('id')]);
+        if (selectedCompany[spreadingActivationCompanyInput.attr('id')] != undefined) {
+            socket.emit('start spreading activation', selectedCompany[spreadingActivationCompanyInput.attr('id')]);
+        }
         return false;
     });
 
@@ -194,16 +198,68 @@
         $('#output').prepend($('<li>').html(msg.replace('\n','<br>')));
     });
 
+    function idToLink(id) {
+        if (id.indexOf("http") == 0) {
+            return "<a href=\"" + id + "\">" + id + "</a>";
+        } else {
+            return id;
+        }
+    }
+
+    resultSpreadingActivation = [];
+
     socket.on('data spreading activation', function(msg){
         if (msg === "") return;
-        var result = JSON.parse(msg);
+        resultSpreadingActivation = JSON.parse(msg);
+        displaySAResult();
+    });
+
+    function createCallback(key){
+        return function(){
+            displaySAResult(key);
+            e.preventDefault();
+        }
+    }
+
+    function displaySAResult(type) {
+        var typeSet = {};
+        var result = resultSpreadingActivation;
+        for (var j=0; j < resultSpreadingActivation.length; j++) {
+            if (resultSpreadingActivation[j].type == "") continue;
+            typeSet[resultSpreadingActivation[j].type] = true;
+        }
+        var dd = $('#filter_dd_sa');
+        dd.empty();
+        for (var key in typeSet) {
+            dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#' + key + '" id="action-sa-' + key + '">' + key + '</a></li>');
+            jQuery("#action-sa-" + key).click(createCallback(key));
+        }
+        dd.append('<li role="presentation" class="divider"></li>');
+        dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="action-sa-other">Other</a></li>');
+        jQuery("#action-sa-other").click(function(e){
+            displaySAResult("");
+        });
+        dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="action-sa-all">All Types</a></li>');
+        jQuery("#action-sa-all").click(function(e){
+            displaySAResult();
+        });
+
+        if (type != undefined) {
+            result = [];
+            for (var k=0; k < resultSpreadingActivation.length; k++) {
+                if (resultSpreadingActivation[k].type == type) {
+                    result.push(resultSpreadingActivation[k]);
+                }
+            }
+        }
         $('#spreading-activation-result-table').show();
         $("#spreading-activation-result-table > tbody").html("");
-        for (var i=0; i < 10; i++) {
-            $('#spreading-activation-result-table').append($('<tr>').html("<td>" + result[i].id + "</td><td>" + result[i].value + "</td>"));
+        for (var i=0; i < 10 && i < result.length; i++) {
+            $('#spreading-activation-result-table').append($('<tr>').html("<td>" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : idToLink(result[i].id)) + "</td><td>" + Math.round(parseFloat(result[i].value)*10000)/100.0 + " %</td>"));
         }
         $('.container').animate({"margin-top": "30px"});
-    });
+    }
+
 
     var lastMessageND = undefined;
 
@@ -212,7 +268,7 @@
         lastMessageND = msg;
         var result = JSON.parse(msg);
         $('#network-distance-result-table').show();
-        $('#network-distance-result-table').prepend($('<tr>').html("<td>" + result.companyA + "</td><td>" + result.companyB + "</td><td>" + result.distance + "</td>"));
+        $('#network-distance-result-table').prepend($('<tr>').html("<td>" + result.companyA.name + " (" + result.companyA.type + ")</td><td>" + result.companyB.name + " (" + result.companyB.type + ")</td><td>" + result.distance + "</td>"));
         $('.container').animate({"margin-top": "30px"});
     });
 

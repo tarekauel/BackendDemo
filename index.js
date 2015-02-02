@@ -32,11 +32,11 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-fs.unlink('public/spreading_activation_result.json', function(err) {
+fs.unlink(__dirname + '/public/spreading_activation_result.json', function(err) {
     if (err && err.errno != 34) console.log(err);
 });
 
-fs.unlink('public/network_distance.json', function(err) {
+fs.unlink(__dirname + '/public/network_distance.json', function(err) {
     if (err && err.errno != 34) console.log(err);
 });
 
@@ -46,10 +46,12 @@ app.get('/data.json', function(req, res){
 
 app.use('/', express.static(__dirname + '/public'));
 var status = false;
+var requestedSA = false;
 
 io.on('connection', function(socket){
     socket.on('start spreading activation', function(company){
         console.log("request for spreading activation: " + company);
+        requestedSA = true;
         status = false;
         io.emit("status", status);
         python.stdin.write("spreading_activation('" + company +"',8, 0.0001,True)" + "\n");
@@ -60,6 +62,18 @@ io.on('connection', function(socket){
         status = false;
         io.emit("status", status);
         python.stdin.write("distance_networks_wrapper('" + companies[0] +"', '" + companies[1] +"', 8, 0.0001,3,10)" + "\n");
+    });
+    socket.on('disconnect', function () {
+        oldFileND = "";
+        oldFileSA = "";
+
+        fs.unlink(__dirname + '/public/spreading_activation_result.json', function(err) {
+            if (err && err.errno != 34) console.log(err);
+        });
+
+        fs.unlink(__dirname + '/public/network_distance.json', function(err) {
+            if (err && err.errno != 34) console.log(err);
+        });
     });
     io.emit("status", status);
 });
@@ -84,11 +98,14 @@ python.stdout.on('readable', function() {
         }
     }
     fs.readFile('public/spreading_activation_result.json', function (err, data) {
+        if (!requestedSA) {
+            return;
+        }
         if (err) {
             if (err.errno != 34) console.log(err); // ignore if file not found
             return;
         }
-        if (data != oldFileSA) {
+        if (data.toString() != oldFileSA.toString()) {
             try {
                 array = JSON.parse(data);
                 oldFileSA = data;
@@ -96,6 +113,10 @@ python.stdout.on('readable', function() {
                 return;
             }
             io.emit("data spreading activation", JSON.stringify(array));
+            requestedSA = false;
+            fs.unlink(__dirname + '/public/spreading_activation_result.json', function(err) {
+                if (err && err.errno != 34) console.log(err);
+            });
         }
     });
     fs.readFile('public/network_distance.json', function (err, data) {
@@ -111,6 +132,13 @@ python.stdout.on('readable', function() {
                 return;
             }
             io.emit("data network distance", JSON.stringify(object));
+            fs.unlink(__dirname + '/public/spreading_activation_result.json', function(err) {
+                if (err && err.errno != 34) console.log(err);
+            });
+
+            fs.unlink(__dirname + '/public/network_distance.json', function(err) {
+                if (err && err.errno != 34) console.log(err);
+            });
         }
     });
 });
