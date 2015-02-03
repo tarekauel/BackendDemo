@@ -87,6 +87,7 @@
 <script type="text/javascript">
 
     var selectedCompany = {};
+    var map = {};
     var spreadingActivationCompanyInput = $('#spreading-activation-company-input');
     var ndInputA = $('#network-distance-company-input-a');
     var ndInputB = $('#network-distance-company-input-b');
@@ -108,7 +109,6 @@
     var init = function() {
         $.getJSON('data.json', function (data) {
             var states = [];
-            var map = {};
             data.forEach(function (elem) {
                 states.push(elem.name + " (" + elem.type + ")");
                 map[elem.name + " (" + elem.type + ")"] = elem["__id"];
@@ -215,8 +215,19 @@
     });
 
     function createCallback(key){
-        return function(){
+        return function(e){
             displaySAResult(key);
+            e.preventDefault();
+        }
+    }
+
+    function createCallbackChangeItem(name){
+        return function(e){
+            var id = "spreading-activation-company-input";
+            $('#' + id).val(name);
+            selectedCompany[id] = map[name];
+            selectedCompany[id + "_name"] = name;
+            $('#spreading-activation-form').submit();
             e.preventDefault();
         }
     }
@@ -258,7 +269,12 @@
         $('#spreading-activation-result-table').show();
         $("#spreading-activation-result-table > tbody").html("");
         for (var i=0; i < 10 && i < result.length; i++) {
-            $('#spreading-activation-result-table').append($('<tr>').html("<td><a href=\"#\" id=\"sa-result-" + result[i].id + "\">" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : result[i].id) + "</a></td><td>" + Math.round(parseFloat(result[i].value)*100000)/1000.0 + " %</td>"));
+            if (result[i].name != "" && ['Organization','City','Category','Keyword','Region','Country'].indexOf(result[i].type) != -1) {
+                $('#spreading-activation-result-table').append($('<tr>').html("<td><a href=\"#\" id=\"sa-result-" + i + "\">" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : result[i].id) + "</a></td><td>" + Math.round(parseFloat(result[i].value) * 100000) / 1000.0 + " %</td>"));
+                jQuery("#sa-result-" + i).click(createCallbackChangeItem(result[i].name + " (" + result[i].type + ")"));
+            } else {
+                $('#spreading-activation-result-table').append($('<tr>').html("<td>" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : result[i].id) + "</td><td>" + Math.round(parseFloat(result[i].value) * 100000) / 1000.0 + " %</td>"));
+            }
         }
         $('.container').animate({"margin-top": "30px"});
     }
