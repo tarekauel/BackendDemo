@@ -223,8 +223,11 @@
 
     function displaySAResult(type) {
         var typeSet = {};
-        var result = resultSpreadingActivation;
+        var result = [];
         for (var j=0; j < resultSpreadingActivation.length; j++) {
+            if (resultSpreadingActivation[j].value != "0") {
+                result.push(resultSpreadingActivation[j]);
+            } else { continue; }
             if (resultSpreadingActivation[j].type == "") continue;
             typeSet[resultSpreadingActivation[j].type] = true;
         }
@@ -255,7 +258,7 @@
         $('#spreading-activation-result-table').show();
         $("#spreading-activation-result-table > tbody").html("");
         for (var i=0; i < 10 && i < result.length; i++) {
-            $('#spreading-activation-result-table').append($('<tr>').html("<td>" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : idToLink(result[i].id)) + "</td><td>" + Math.round(parseFloat(result[i].value)*10000)/100.0 + " %</td>"));
+            $('#spreading-activation-result-table').append($('<tr>').html("<td><a href=\"#\" id=\"sa-result-" + result[i].id + "\">" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : result[i].id) + "</a></td><td>" + Math.round(parseFloat(result[i].value)*100000)/1000.0 + " %</td>"));
         }
         $('.container').animate({"margin-top": "30px"});
     }
