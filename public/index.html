@@ -31,7 +31,9 @@
             <form id="spreading-activation-form">
                 <div class="form-group" id="spreading-activation-searchbox">
                     <label class="control-label" for="spreading-activation-company-input" id="searchbox-error-text">Entity not found</label>
-                    <input id="spreading-activation-company-input" class="typeahead form-control input-lg" type="text" placeholder="input an entity name">
+                    <div id="scrollable-dropdown-menu" style="display: inline">
+                        <input id="spreading-activation-company-input" class="typeahead form-control input-lg" type="text" placeholder="input an entity name">
+                    </div>
                     <button class="btn btn-primary btn-lg" id="spreading-activation-go" style="margin-bottom:5px;">Send</button>
                 </div>
             </form>
@@ -88,6 +90,7 @@
 
     var selectedCompany = {};
     var map = {};
+    var map_reverse = {};
     var spreadingActivationCompanyInput = $('#spreading-activation-company-input');
     var ndInputA = $('#network-distance-company-input-a');
     var ndInputB = $('#network-distance-company-input-b');
@@ -112,11 +115,13 @@
             data.forEach(function (elem) {
                 states.push(elem.name + " (" + elem.type + ")");
                 map[elem.name + " (" + elem.type + ")"] = elem["__id"];
+                map_reverse[elem["__id"]] = elem.name;
             });
 
             states = new Bloodhound({
                 datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
                 queryTokenizer: Bloodhound.tokenizers.whitespace,
+                limit: 25,
                 // `states` is an array of state names defined in "The Basics"
                 local: $.map(states, function (state) {
                     return {value: state};
@@ -200,9 +205,13 @@
 
     function idToLink(id) {
         if (id.indexOf("http") == 0) {
-            return "<a href=\"" + id + "\">" + id + "</a>";
+            return "<a href=\"" + id + "\" target=\"_blank\">" + id + "&nbsp;<span class=\"glyphicon glyphicon-new-window\"></span></a>";
         } else {
-            return id;
+            if (map[id] != undefined) {
+
+            } else {
+                return id;
+            }
         }
     }
 
@@ -269,11 +278,14 @@
         $('#spreading-activation-result-table').show();
         $("#spreading-activation-result-table > tbody").html("");
         for (var i=0; i < 10 && i < result.length; i++) {
-            if (result[i].name != "" && ['Organization','City','Category','Keyword','Region','Country'].indexOf(result[i].type) != -1) {
+            if ((result[i].name != "" && ['Organization', 'City', 'Category', 'Keyword', 'Region', 'Country', 'Person'].indexOf(result[i].type) != -1) || (map_reverse[result[i].id] != undefined)) {
+                if (result[i].name == "") {
+                    result[i].name = map_reverse[result[i].id];
+                }
                 $('#spreading-activation-result-table').append($('<tr>').html("<td><a href=\"#\" id=\"sa-result-" + i + "\">" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : result[i].id) + "</a></td><td>" + Math.round(parseFloat(result[i].value) * 100000) / 1000.0 + " %</td>"));
                 jQuery("#sa-result-" + i).click(createCallbackChangeItem(result[i].name + " (" + result[i].type + ")"));
             } else {
-                $('#spreading-activation-result-table').append($('<tr>').html("<td>" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : result[i].id) + "</td><td>" + Math.round(parseFloat(result[i].value) * 100000) / 1000.0 + " %</td>"));
+                $('#spreading-activation-result-table').append($('<tr>').html("<td>" + ((result[i].name != "") ? result[i].name + " (" + result[i].type + ")" : idToLink(result[i].id)) + "</td><td>" + Math.round(parseFloat(result[i].value) * 100000) / 1000.0 + " %</td>"));
             }
         }
         $('.container').animate({"margin-top": "30px"});

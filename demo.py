@@ -43,13 +43,43 @@ for f in edgesFiles:
 
 print g.summary();
 
-#,'City','Category','Keyword','Region','Country'
-d = g.get_vertices()[['__id','name','type']]
-d = d[d['name'] != None and d['name'] != 'null']
-d = d.filter_by(['Organization','City','Category','Keyword','Region','Country'],'type')
-d.save(path + "/auto.csv", format='csv')
+def parseResult(row, columns):
+    for c in columns:
+        if isinstance(c, list):
+            result = ''
+            found = False
+            for x in c:
+                if row[x] != None and row[x] != '':
+                    result += row[x] + ' '
+                    found = True
+            if found:
+                return result
+        else:
+            if row[c] != None and row[c] != '':
+                return row[c]
+    return None
 
-print len(d), " items for auto suggestion"
+def select(graph, columns):
+    columns.append('__id')
+    columns.append('type')
+    select_columns = []
+    for c in columns:
+        if isinstance(c, list):
+            for x in c:
+                select_columns.append(x)
+        else:
+            select_columns.append(c)
+    return graph.get_vertices()[select_columns]
+
+columns = ['name','label',['first_name','last_name']]
+d = select(g,columns)
+x = d[['__id','type']]
+x = x.add_column(d.apply(lambda row: parseResult(row, columns)), 'name')
+x = x[x['name'] != None]
+x = x.filter_by(['Organization','City','Category','keyword','Region','Country','Person','TeamMember','Founder','Advisor'],'type')
+x.save(path + "/auto.csv", format='csv')
+
+print len(x), " items for auto suggestion"
 
 print "START NOW INITIALIZING"
 
