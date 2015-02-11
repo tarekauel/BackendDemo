@@ -305,7 +305,11 @@
                             if (k === 0) {
                                 inner_html += result[0].name + " --> ";
                             } else {
-                                inner_html += result[i].tracking[j][k].node + " --> ";
+                                if (map_reverse[result[i].tracking[j][k].node] != undefined) {
+                                    inner_html += map_reverse[result[i].tracking[j][k].node] + " --> ";
+                                } else {
+                                    inner_html += result[i].tracking[j][k].node + " --> ";
+                                }
                             }
                         }
                         inner_html += map_reverse[result[i].id] + "</td>";
@@ -325,7 +329,11 @@
                             if (k === 0) {
                                 inner_html += result[0].name + " --> ";
                             } else {
-                                inner_html += result[i].tracking[j][k].node + " --> ";
+                                if (map_reverse[result[i].tracking[j][k].node] != undefined) {
+                                    inner_html += map_reverse[result[i].tracking[j][k].node] + " --> ";
+                                } else {
+                                    inner_html += result[i].tracking[j][k].node + " --> ";
+                                }
                             }
                         }
                         inner_html += result[i].id + "</td>";
