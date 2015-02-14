@@ -18,8 +18,8 @@
             <!-- Collect the nav links, forms, and other content for toggling -->
             <div class="collapse navbar-collapse" id="myTab">
                 <ul class="nav navbar-nav" role="tablist">
-                    <li class="active" role="presentation"><a href="#spreading-activation" aria-controls="spreading-activation" role="tab" data-toggle="tab">spreading activation</a></li>
-                    <li role="presentation"><a href="#network-distance" aria-controls="profile" role="tab" data-toggle="tab">subgraph distance</a></li>
+                    <li class="active" role="presentation"><a href="#spreading-activation" aria-controls="spreading-activation" role="tab" data-toggle="tab">Context</a></li>
+                    <li role="presentation"><a href="#network-distance" aria-controls="profile" role="tab" data-toggle="tab">Similarity</a></li>
                 </ul>
 
             </div><!-- /.navbar-collapse -->
@@ -223,9 +223,15 @@
         displaySAResult();
     });
 
-    function createCallback(key){
+    function createCallback(type,key){
+        var new_list = JSON.parse(JSON.stringify(type));
+        if (new_list.indexOf(key) == -1) {
+            new_list.push(key);
+        } else {
+            new_list.splice(new_list.indexOf(key),1);
+        }
         return function(e){
-            displaySAResult(key);
+            displaySAResult(new_list);
             e.preventDefault();
         }
     }
@@ -254,6 +260,7 @@
     }
 
     function displaySAResult(type) {
+        if (!type) type = [];
         var typeSet = {};
         var result = [];
         for (var j=0; j < resultSpreadingActivation.length; j++) {
@@ -265,28 +272,36 @@
         }
         var dd = $('#filter_dd_sa');
         dd.empty();
-        for (var key in typeSet) {
-            dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#' + key + '" id="action-sa-' + key + '">' + key + '</a></li>');
-            jQuery("#action-sa-" + key).click(createCallback(key));
-        }
-        dd.append('<li role="presentation" class="divider"></li>');
-        dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="action-sa-other">Other</a></li>');
-        jQuery("#action-sa-other").click(function(e){
-            displaySAResult("");
-        });
-        dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="action-sa-all">All Types</a></li>');
-        jQuery("#action-sa-all").click(function(e){
-            displaySAResult();
-        });
 
-        if (type != undefined) {
-            result = [];
-            for (var k=0; k < resultSpreadingActivation.length; k++) {
-                if (resultSpreadingActivation[k].type == type) {
-                    result.push(resultSpreadingActivation[k]);
-                }
+        for (var key in typeSet) {
+            dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#' + key + '" id="action-sa-' + key + '"><input type="checkbox" id="action-sa-' + key + '-cb" /><label>&nbsp;' + key + '</label></a></li>');
+            jQuery("#action-sa-" + key).click(createCallback(type,key));
+            if (type.indexOf(key) != -1) {
+                jQuery("#action-sa-" + key + "-cb").attr("checked","checked");
             }
         }
+        dd.append('<li role="presentation" class="divider"></li>');
+        dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" id="action-sa-other"><input type="checkbox" id="action-sa-other-cb" /><label>&nbsp;Other</label></a></li>');
+        jQuery("#action-sa-other").click(function(e){
+            type.push("");
+            displaySAResult(type);
+        });
+        if (type.indexOf("") != -1) {
+            jQuery("#action-sa-other-cb").attr("checked", "checked");
+        }
+        dd.append('<li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="action-sa-all"><input type="checkbox" style="visibility: hidden"/><label>&nbsp;All Types</label></a></li>');
+        jQuery("#action-sa-all").click(function(e){
+            displaySAResult([]);
+        });
+
+
+        result = [];
+        for (var k=0; k < resultSpreadingActivation.length; k++) {
+            if (type.indexOf(resultSpreadingActivation[k].type) != -1 || type.length === 0) {
+                result.push(resultSpreadingActivation[k]);
+            }
+        }
+
         $('#spreading-activation-result-table').show();
         $("#spreading-activation-result-table > tbody").html("");
         for (var i=0; i < 10 && i < result.length; i++) {
