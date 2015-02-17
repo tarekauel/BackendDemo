@@ -176,7 +176,8 @@ prepareAuto = function() {
     var Converter = require("csvtojson").core.Converter;
     var fs = require("fs");
 
-    var csvFileName = __dirname + "/public/auto.csv";
+    //var csvFileName = __dirname + "/public/auto.csv";
+    var csvFileName = dataPath + "auto.csv";
     var fileStream = fs.createReadStream(csvFileName);
     //new converter instance
     var csvConverter = new Converter({constructResult: true});
