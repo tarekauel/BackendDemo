@@ -25,6 +25,7 @@ if (process.argv[3]) {
 }
 
 var spawn = require('child_process').spawn,
+    //python    = spawn(__dirname + '/AnalysisGraphTool', [location + 'demo.py', dataPath]);
     python    = spawn('/usr/bin/python2.7', [location + 'demo.py', dataPath]);
 var fs = require('fs');
 var express = require('express');
@@ -47,6 +48,7 @@ app.get('/data.json', function(req, res){
 app.use('/', express.static(__dirname + '/public'));
 var status = false;
 var requestedSA = false;
+var modus = "fast";
 
 io.on('connection', function(socket){
     socket.on('start spreading activation', function(company){
@@ -55,6 +57,8 @@ io.on('connection', function(socket){
         status = false;
         io.emit("status", status);
         python.stdin.write("spreading_activation('" + company +"',8, 0.0001,True)" + "\n");
+        /*python.stdin.write(company + "\n");
+        python.stdin.write(modus + "\n");*/
     });
     socket.on('start network distance', function(companies){
         companies = companies.split("\n");
@@ -75,6 +79,9 @@ io.on('connection', function(socket){
             if (err && err.errno != 34) console.log(err);
         });
     });
+    socket.on('changemodus', function(new_modus) {
+        modus = new_modus;
+    });
     io.emit("status", status);
 });
 
@@ -91,10 +98,15 @@ python.stdout.on('readable', function() {
         var message = String(chunk);
         console.log("OUTPUT:\n" + message);
         io.emit("chat message", message);
+        //if (message.indexOf("Waiting for input:") != -1) {
         if (message.indexOf("Waiting for messages") != -1) {
-            prepareAuto();
-            status = true;
-            io.emit("status", status);
+                prepareAuto();
+                status = true;
+                io.emit("status", status);
+        } else if (message.indexOf("Aggregates:") != -1) {
+            io.emit("aggregates", message.split(" ")[1]);
+        } else if (message.indexOf("Runtime for ") != -1) {
+            io.emit("runtime", message.split(" ")[4]);
         }
     }
     fs.readFile('public/spreading_activation_result.json', function (err, data) {
@@ -164,7 +176,7 @@ prepareAuto = function() {
     var Converter = require("csvtojson").core.Converter;
     var fs = require("fs");
 
-    var csvFileName = dataPath + "auto.csv";
+    var csvFileName = __dirname + "/public/auto.csv";
     var fileStream = fs.createReadStream(csvFileName);
     //new converter instance
     var csvConverter = new Converter({constructResult: true});
